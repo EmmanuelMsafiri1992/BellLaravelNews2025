@@ -1,0 +1,243 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\News;
+use Illuminate\Support\Facades\Log;
+
+class NewsController extends Controller
+{
+    public function index(Request $request)
+    {
+        // Get user agent
+        $userAgent = strtolower($request->header('User-Agent', ''));
+        Log::info('Browser accessing app', ['user_agent' => $userAgent]);
+
+        // Check Chrome/Chromium version
+        $chromeVersion = 999;
+        if (preg_match('/chrome\/([0-9]+)/i', $userAgent, $matches)) {
+            $chromeVersion = (int)$matches[1];
+        } elseif (preg_match('/chromium\/([0-9]+)/i', $userAgent, $matches)) {
+            $chromeVersion = (int)$matches[1];
+        }
+
+        // Detect very old browsers that can't run Vue 3 even with polyfills
+        $isVeryOldBrowser = (
+            $chromeVersion < 49 || // Chrome < 49 (2016) can't run Vue 3
+            stripos($userAgent, 'msie') !== false ||
+            stripos($userAgent, 'trident') !== false
+        );
+
+        // Serve optimized HTML view for very old browsers or if explicitly requested
+        if ($isVeryOldBrowser || $request->get('simple') === '1' || $request->get('tv') === '1') {
+            try {
+                $news = News::with('category', 'images')->get();
+                $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
+
+                Log::info('Serving optimized TV view', [
+                    'chrome_version' => $chromeVersion,
+                    'is_very_old' => $isVeryOldBrowser,
+                    'news_count' => $news->count()
+                ]);
+
+                return response()
+                    ->view('news.tv', compact('news', 'settings'))
+                    ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                    ->header('Pragma', 'no-cache')
+                    ->header('Expires', '0');
+            } catch (\Exception $e) {
+                Log::error('Error serving TV view', ['error' => $e->getMessage()]);
+                return response('<h1>Error loading page</h1><p>' . $e->getMessage() . '</p>', 500);
+            }
+        }
+
+        // Serve Vue app for modern browsers (Chrome 49+)
+        Log::info('Serving Vue app');
+        return view('layouts.app');
+    }
+
+    // public function apiIndex()
+    // {
+    //     try {
+    //         $news = News::with('category')->get();
+    //         if ($news->isEmpty()) {
+    //             Log::info('No news records found in the database.');
+    //             return response()->json([
+    //                 'success' => true,
+    //                 'data' => []
+    //             ]);
+    //         }
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $news->map(function ($item) {
+    //                 return [
+    //                     'id' => $item->id,
+    //                     'image_url' => $item->image ? asset('storage/' . $item->image) : null,
+    //                     'title' => $item->title ?? 'No Title',
+    //                     'description' => $item->description ?? 'No Description',
+    //                     'full_description' => $item->description ?? 'No Description', // Assuming full_description is the same as description
+    //                     'date' => $item->created_at ? $item->created_at->format('M d, Y') : null,
+    //                     'status' => $item->status ?? 'draft',
+    //                     'category' => $item->category ? $item->category->name : 'Uncategorized',
+    //                 ];
+    //             })
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error in apiIndex: ' . $e->getMessage());
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'An error occurred while fetching news.',
+    //             'error' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+//     public function apiIndex()
+// {
+//     try {
+//         $news = News::with('category', 'images')->get(); // Load images relationship
+
+//         if ($news->isEmpty()) {
+//             Log::info('No news records found in the database.');
+//             return response()->json([
+//                 'success' => true,
+//                 'data' => []
+//             ]);
+//         }
+
+//         return response()->json([
+//             'success' => true,
+//             'data' => $news->map(function ($item) {
+//                 return [
+//                     'id' => $item->id,
+//                     // Get the first image from the images relationship
+//                     'image_url' => $item->images->isNotEmpty()
+//                         ? asset('storage/' . $item->images->first()->url)
+//                         : null,
+//                     'title' => $item->title ?? 'No Title',
+//                     'description' => $item->description ?? 'No Description',
+//                     'full_description' => $item->description ?? 'No Description',
+//                     'date' => $item->created_at ? $item->created_at->format('M d, Y') : null,
+//                     'status' => $item->status ?? 'draft',
+//                     'category' => $item->category ? $item->category->name : 'Uncategorized',
+//                     // Optional: include all images if needed
+//                     'all_images' => $item->images->map(function($img) {
+//                         return asset('storage/' . $img->url);
+//                     }),
+//                 ];
+//             })
+//         ]);
+//     } catch (\Exception $e) {
+//         Log::error('Error in apiIndex: ' . $e->getMessage());
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'An error occurred while fetching news.',
+//             'error' => $e->getMessage()
+//         ], 500);
+//     }
+// }
+// public function apiIndex()
+// {
+//     try {
+//         $news = News::with('category', 'images')->get();
+
+//         // Debug logging
+//         Log::info('News count: ' . $news->count());
+//         foreach ($news as $item) {
+//             Log::info('News ID: ' . $item->id . ', Images count: ' . $item->images->count());
+//             foreach ($item->images as $image) {
+//                 Log::info('Image URL: ' . $image->url);
+//                 Log::info('Full asset URL: ' . asset('storage/' . $image->url));
+//             }
+//         }
+
+//         if ($news->isEmpty()) {
+//             return response()->json(['success' => true, 'data' => []]);
+//         }
+
+//         return response()->json([
+//             'success' => true,
+//             'data' => $news->map(function ($item) {
+//                 $imageUrl = null;
+//                 if ($item->images->isNotEmpty()) {
+//                     $imageUrl = asset('storage/' . $item->images->first()->url);
+//                 }
+
+//                 return [
+//                     'id' => $item->id,
+//                     'image_url' => $imageUrl,
+//                     'title' => $item->title ?? 'No Title',
+//                     'description' => $item->description ?? 'No Description',
+//                     'full_description' => $item->description ?? 'No Description',
+//                     'date' => $item->created_at ? $item->created_at->format('M d, Y') : null,
+//                     'status' => $item->status ?? 'draft',
+//                     'category' => $item->category ? $item->category->name : 'Uncategorized',
+//                     // Debug info - remove this later
+//                     'debug_images_count' => $item->images->count(),
+//                     'debug_raw_image_path' => $item->images->first()->url ?? null,
+//                 ];
+//             })
+//         ]);
+//     } catch (\Exception $e) {
+//         Log::error('Error in apiIndex: ' . $e->getMessage());
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'An error occurred while fetching news.',
+//             'error' => $e->getMessage()
+//         ], 500);
+//     }
+// }
+public function apiIndex()
+{
+    try {
+        $news = News::with('category', 'images')->get();
+
+        $slides = [];
+
+        foreach ($news as $item) {
+            if ($item->images->isNotEmpty()) {
+                // Create a slide for each image
+                foreach ($item->images as $image) {
+                    $slides[] = [
+                        'id' => $item->id . '_' . $image->id, // Unique ID
+                        'news_id' => $item->id,
+                        'image_url' => asset('storage/' . $image->url),
+                        'title' => $item->title ?? 'No Title',
+                        'description' => $item->description ?? 'No Description',
+                        'full_description' => $item->description ?? 'No Description',
+                        'status' => $item->status ?? 'draft',
+                        'category' => $item->category ? $item->category->name : 'Uncategorized',
+                        'slide_duration' => $image->slide_duration ?? 5000, // Include slide duration
+                    ];
+                }
+            } else {
+                // News with no images - use placeholder or skip
+                $slides[] = [
+                    'id' => $item->id,
+                    'news_id' => $item->id,
+                    'image_url' => '',
+                    'title' => $item->title ?? 'No Title',
+                    'description' => $item->description ?? 'No Description',
+                    'full_description' => $item->description ?? 'No Description',
+                    'status' => $item->status ?? 'draft',
+                    'category' => $item->category ? $item->category->name : 'Uncategorized',
+                    'slide_duration' => 5000, // Default duration for items without images
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $slides
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error in apiIndex: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while fetching news.',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+}

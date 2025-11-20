@@ -1,0 +1,25 @@
+    // Attach event listeners for forms
+    const loginFormElement = document.getElementById('loginForm');
+    console.log('DEBUG: loginForm element:', loginFormElement);
+    if (loginFormElement) {
+        console.log("DEBUG: About to attach handleLogin, function is:", handleLogin);
+        try {
+            loginFormElement.addEventListener('submit', handleLogin);
+            console.log('DEBUG: handleLogin event listener attached successfully');
+        } catch (err) {
+            console.error('DEBUG: Error attaching event listener:', err);
+        }
+    } else {
+        console.error('DEBUG: loginForm element NOT FOUND!');
+    }
+    
+    // TEST: Add direct button click listener
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+        console.log('DEBUG: Login button found, adding click listener');
+        loginBtn.addEventListener('click', (e) => {
+            console.log('DEBUG: Login button CLICKED!');
+        });
+    }
+    
+    document.getElementById('resetPasswordForm')?.addEventListener('submit', handleResetPassword);

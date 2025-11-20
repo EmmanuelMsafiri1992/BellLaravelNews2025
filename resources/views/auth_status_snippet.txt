@@ -1,0 +1,6 @@
+    <!-- Laravel Authentication Status for JavaScript -->
+    <input type="hidden" id="flaskLoginStatus" value="@auth true @else false @endauth">
+    @auth
+    <input type="hidden" id="currentUserRoleInput" value="{{ Auth::user()->role }}">
+    <input type="hidden" id="currentUserFeaturesActivatedInput" value="{{ Auth::user()->features_activated ? 'true' : 'false' }}">
+    @endauth

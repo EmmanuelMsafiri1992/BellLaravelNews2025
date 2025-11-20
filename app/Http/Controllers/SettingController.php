@@ -1,0 +1,214 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Setting;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
+class SettingController extends Controller
+{
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /**
+     * Get all system settings.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function index()
+    {
+        $settings = [
+            'network' => Setting::getNetworkSettings(),
+            'license' => Setting::getLicenseSettings(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'settings' => $settings
+        ]);
+    }
+
+    /**
+     * Update system settings.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function update(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'network.ipType' => 'sometimes|in:static,dynamic',
+            'network.ipAddress' => 'sometimes|nullable|ip',
+            'network.subnetMask' => 'sometimes|nullable|ip',
+            'network.gateway' => 'sometimes|nullable|ip',
+            'network.dnsServer' => 'sometimes|nullable|ip',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 400);
+        }
+
+        // Update network settings if provided
+        if ($request->has('network')) {
+            $networkData = $request->network;
+
+            // Validate that if ipType is static, required fields are present
+            if (isset($networkData['ipType']) && $networkData['ipType'] === 'static') {
+                if (empty($networkData['ipAddress']) || empty($networkData['subnetMask']) || empty($networkData['gateway'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'For static IP, you must provide ipAddress, subnetMask, and gateway'
+                    ], 400);
+                }
+            }
+
+            Setting::updateNetworkSettings($networkData);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Settings updated successfully',
+            'settings' => [
+                'network' => Setting::getNetworkSettings(),
+                'license' => Setting::getLicenseSettings(),
+            ]
+        ]);
+    }
+
+    /**
+     * Get current network status from the system.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function currentNetworkStatus()
+    {
+        $status = [
+            'ipAddress' => 'Unknown',
+            'subnetMask' => 'Unknown',
+            'gateway' => 'Unknown',
+            'dnsServer' => 'Unknown',
+        ];
+
+        try {
+            // Try to get current IP address
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                // Windows
+                $output = shell_exec('ipconfig');
+                if ($output) {
+                    // Parse IPv4 Address
+                    if (preg_match('/IPv4 Address[.\s]+:\s+([0-9.]+)/', $output, $matches)) {
+                        $status['ipAddress'] = $matches[1];
+                    }
+                    // Parse Subnet Mask
+                    if (preg_match('/Subnet Mask[.\s]+:\s+([0-9.]+)/', $output, $matches)) {
+                        $status['subnetMask'] = $matches[1];
+                    }
+                    // Parse Default Gateway
+                    if (preg_match('/Default Gateway[.\s]+:\s+([0-9.]+)/', $output, $matches)) {
+                        $status['gateway'] = $matches[1];
+                    }
+                }
+            } else {
+                // Linux/Unix
+                $output = shell_exec('ip addr show');
+                if ($output) {
+                    // Parse IP address
+                    if (preg_match('/inet\s+([0-9.]+)\/([0-9]+)/', $output, $matches)) {
+                        $status['ipAddress'] = $matches[1];
+                        // Convert CIDR to subnet mask
+                        $cidr = (int)$matches[2];
+                        $status['subnetMask'] = long2ip(-1 << (32 - $cidr));
+                    }
+                }
+
+                // Get gateway
+                $gatewayOutput = shell_exec('ip route | grep default');
+                if ($gatewayOutput && preg_match('/default via ([0-9.]+)/', $gatewayOutput, $matches)) {
+                    $status['gateway'] = $matches[1];
+                }
+
+                // Get DNS server
+                if (file_exists('/etc/resolv.conf')) {
+                    $resolvConf = file_get_contents('/etc/resolv.conf');
+                    if (preg_match('/nameserver\s+([0-9.]+)/', $resolvConf, $matches)) {
+                        $status['dnsServer'] = $matches[1];
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // Silently fail and return Unknown values
+        }
+
+        return response()->json([
+            'success' => true,
+            'current' => $status
+        ]);
+    }
+
+    /**
+     * Apply network settings to the system (Linux only).
+     * WARNING: This modifies system network configuration files.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function applyNetworkSettings(Request $request)
+    {
+        // Only superusers can apply network settings
+        if (!auth()->user()->isSuperuser()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only superusers can apply network settings'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'ipType' => 'required|in:static,dynamic',
+            'ipAddress' => 'required_if:ipType,static|nullable|ip',
+            'subnetMask' => 'required_if:ipType,static|nullable|ip',
+            'gateway' => 'required_if:ipType,static|nullable|ip',
+            'dnsServer' => 'sometimes|nullable|ip',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 400);
+        }
+
+        // Check if running on Windows (development)
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Network configuration is only supported on Linux systems (Nano Pi deployment)'
+            ], 400);
+        }
+
+        // Save settings to database first
+        Setting::updateNetworkSettings($request->all());
+
+        // TODO: Implement actual network configuration for Linux
+        // This would involve modifying /etc/netplan/*, /etc/dhcpcd.conf, or /etc/network/interfaces
+        // depending on the system configuration detected
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Network settings saved. System restart may be required for changes to take effect.',
+            'warning' => 'Actual network application not yet implemented for this environment'
+        ]);
+    }
+}
