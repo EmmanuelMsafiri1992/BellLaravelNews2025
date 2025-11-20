@@ -142,14 +142,6 @@ export function startAlarmMonitoring() {
     // Check alarms every 10 seconds (frequent enough to not miss any)
     setInterval(checkAlarms, 10 * 1000);
     
-    // Also check immediately on the next minute boundary
-    const now = new Date();
-    const msUntilNextMinute = (60 - now.getSeconds()) * 1000;
-    setTimeout(() => {
-        checkAlarms();
-        // Then check every 10 seconds
-        setInterval(checkAlarms, 10 * 1000);
-    }, msUntilNextMinute);
     
     console.log("✅ Alarm monitoring system started");
 }
