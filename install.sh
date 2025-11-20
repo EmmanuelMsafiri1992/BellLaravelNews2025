@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 APP_NAME="BellNews"
 APP_DIR="/opt/bellnews"
 SERVICE_NAME="bellnews"
-PHP_VERSION="7.4"  # Minimum PHP version required
+PHP_VERSION=""  # Will be auto-detected
 APP_PORT="8000"
 APP_USER="bellnews"
 
@@ -71,34 +71,90 @@ check_system() {
 install_dependencies() {
     print_message "Installing system dependencies..."
 
+    # Install basic packages first
     apt-get update
+    apt-get install -y software-properties-common curl wget git unzip sqlite3
+
+    # Check if PHP is already installed
+    if command -v php &> /dev/null; then
+        INSTALLED_PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+        print_message "PHP $INSTALLED_PHP_VERSION is already installed"
+        PHP_VERSION=$INSTALLED_PHP_VERSION
+    else
+        # Add ondrej/php PPA for Ubuntu/Debian systems
+        print_message "Adding PHP repository..."
+        add-apt-repository -y ppa:ondrej/php 2>/dev/null || {
+            print_warning "Could not add PPA, trying to install default PHP..."
+        }
+        apt-get update
+
+        # Try to install PHP 7.4, fall back to available version
+        if apt-cache show php7.4 &> /dev/null; then
+            PHP_VERSION="7.4"
+        elif apt-cache show php7.3 &> /dev/null; then
+            PHP_VERSION="7.3"
+        elif apt-cache show php7.2 &> /dev/null; then
+            PHP_VERSION="7.2"
+        elif apt-cache show php7.0 &> /dev/null; then
+            PHP_VERSION="7.0"
+        else
+            # Use default php package
+            PHP_VERSION=""
+            print_warning "Using default PHP version"
+        fi
+    fi
 
     # Install PHP and extensions
-    print_message "Installing PHP $PHP_VERSION and extensions..."
-    apt-get install -y \
-        php${PHP_VERSION} \
-        php${PHP_VERSION}-cli \
-        php${PHP_VERSION}-fpm \
-        php${PHP_VERSION}-mbstring \
-        php${PHP_VERSION}-xml \
-        php${PHP_VERSION}-bcmath \
-        php${PHP_VERSION}-curl \
-        php${PHP_VERSION}-zip \
-        php${PHP_VERSION}-sqlite3 \
-        php${PHP_VERSION}-gd \
-        php${PHP_VERSION}-json \
-        sqlite3 \
-        unzip \
-        git \
-        curl \
-        supervisor
+    if [ -n "$PHP_VERSION" ]; then
+        print_message "Installing PHP $PHP_VERSION and extensions..."
+        apt-get install -y \
+            php${PHP_VERSION} \
+            php${PHP_VERSION}-cli \
+            php${PHP_VERSION}-mbstring \
+            php${PHP_VERSION}-xml \
+            php${PHP_VERSION}-bcmath \
+            php${PHP_VERSION}-curl \
+            php${PHP_VERSION}-zip \
+            php${PHP_VERSION}-sqlite3 \
+            php${PHP_VERSION}-gd \
+            php${PHP_VERSION}-json 2>/dev/null || {
+                # json extension may not be separate package in newer versions
+                print_warning "Some PHP extensions might already be included"
+            }
+    else
+        print_message "Installing default PHP and extensions..."
+        apt-get install -y \
+            php \
+            php-cli \
+            php-mbstring \
+            php-xml \
+            php-bcmath \
+            php-curl \
+            php-zip \
+            php-sqlite3 \
+            php-gd \
+            php-json 2>/dev/null || true
+    fi
+
+    # Verify PHP installation
+    if ! command -v php &> /dev/null; then
+        print_error "PHP installation failed!"
+        exit 1
+    fi
+
+    INSTALLED_VERSION=$(php -v | head -n 1)
+    print_message "PHP installed: $INSTALLED_VERSION"
 
     # Install Composer
     if ! command -v composer &> /dev/null; then
         print_message "Installing Composer..."
         curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+        if [ $? -ne 0 ]; then
+            print_error "Composer installation failed!"
+            exit 1
+        fi
     else
-        print_message "Composer already installed"
+        print_message "Composer already installed: $(composer --version | head -n 1)"
     fi
 }
 
