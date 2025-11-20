@@ -67,6 +67,31 @@ check_system() {
     fi
 }
 
+# Check PHP version compatibility
+check_php_version() {
+    if ! command -v php &> /dev/null; then
+        return 1  # PHP not installed
+    fi
+
+    local PHP_VERSION_FULL=$(php -r "echo PHP_VERSION;")
+    local PHP_MAJOR=$(php -r "echo PHP_MAJOR_VERSION;")
+    local PHP_MINOR=$(php -r "echo PHP_MINOR_VERSION;")
+    local PHP_PATCH=$(php -r "echo PHP_RELEASE_VERSION;")
+
+    print_message "Detected PHP $PHP_VERSION_FULL"
+
+    # Laravel 7 requires PHP >= 7.2.5
+    if [ "$PHP_MAJOR" -lt 7 ]; then
+        return 1  # Too old
+    elif [ "$PHP_MAJOR" -eq 7 ] && [ "$PHP_MINOR" -lt 2 ]; then
+        return 1  # Too old
+    elif [ "$PHP_MAJOR" -eq 7 ] && [ "$PHP_MINOR" -eq 2 ] && [ "$PHP_PATCH" -lt 5 ]; then
+        return 1  # Too old
+    fi
+
+    return 0  # Version is compatible
+}
+
 # Install system dependencies
 install_dependencies() {
     print_message "Installing system dependencies..."
@@ -75,75 +100,78 @@ install_dependencies() {
     apt-get update
     apt-get install -y software-properties-common curl wget git unzip sqlite3
 
-    # Check if PHP is already installed
-    if command -v php &> /dev/null; then
-        INSTALLED_PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
-        print_message "PHP $INSTALLED_PHP_VERSION is already installed"
-        PHP_VERSION=$INSTALLED_PHP_VERSION
+    # Check if PHP is installed and if version is compatible
+    if check_php_version; then
+        INSTALLED_PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION.'.'.PHP_RELEASE_VERSION;")
+        print_message "PHP $INSTALLED_PHP_VERSION is compatible with Laravel 7 ✓"
     else
+        if command -v php &> /dev/null; then
+            OLD_PHP_VERSION=$(php -r "echo PHP_VERSION;")
+            print_warning "PHP $OLD_PHP_VERSION is too old for Laravel 7 (requires >= 7.2.5)"
+            print_message "Upgrading PHP..."
+        else
+            print_message "PHP not found, installing..."
+        fi
+
         # Add ondrej/php PPA for Ubuntu/Debian systems
         print_message "Adding PHP repository..."
-        add-apt-repository -y ppa:ondrej/php 2>/dev/null || {
-            print_warning "Could not add PPA, trying to install default PHP..."
+        LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php 2>/dev/null || {
+            print_warning "Could not add PPA, trying default repositories..."
         }
         apt-get update
 
-        # Try to install PHP 7.4, fall back to available version
-        if apt-cache show php7.4 &> /dev/null; then
-            PHP_VERSION="7.4"
-        elif apt-cache show php7.3 &> /dev/null; then
-            PHP_VERSION="7.3"
-        elif apt-cache show php7.2 &> /dev/null; then
-            PHP_VERSION="7.2"
-        elif apt-cache show php7.0 &> /dev/null; then
-            PHP_VERSION="7.0"
-        else
-            # Use default php package
-            PHP_VERSION=""
-            print_warning "Using default PHP version"
+        # Determine which PHP version to install
+        TARGET_PHP_VERSION=""
+        for version in 7.4 7.3 7.2; do
+            if apt-cache show php${version} &> /dev/null 2>&1; then
+                TARGET_PHP_VERSION=$version
+                break
+            fi
+        done
+
+        if [ -z "$TARGET_PHP_VERSION" ]; then
+            print_error "Could not find compatible PHP version (>= 7.2.5) in repositories"
+            print_error "Please upgrade your system or manually install PHP 7.2+"
+            exit 1
+        fi
+
+        print_message "Installing PHP $TARGET_PHP_VERSION and extensions..."
+        apt-get install -y \
+            php${TARGET_PHP_VERSION} \
+            php${TARGET_PHP_VERSION}-cli \
+            php${TARGET_PHP_VERSION}-mbstring \
+            php${TARGET_PHP_VERSION}-xml \
+            php${TARGET_PHP_VERSION}-bcmath \
+            php${TARGET_PHP_VERSION}-curl \
+            php${TARGET_PHP_VERSION}-zip \
+            php${TARGET_PHP_VERSION}-sqlite3 \
+            php${TARGET_PHP_VERSION}-gd \
+            php${TARGET_PHP_VERSION}-json 2>/dev/null || {
+                print_warning "Some PHP extensions might already be included"
+            }
+
+        # Set the new PHP version as default if multiple versions exist
+        if command -v update-alternatives &> /dev/null; then
+            print_message "Setting PHP $TARGET_PHP_VERSION as default..."
+            update-alternatives --set php /usr/bin/php${TARGET_PHP_VERSION} 2>/dev/null || true
         fi
     fi
 
-    # Install PHP and extensions
-    if [ -n "$PHP_VERSION" ]; then
-        print_message "Installing PHP $PHP_VERSION and extensions..."
-        apt-get install -y \
-            php${PHP_VERSION} \
-            php${PHP_VERSION}-cli \
-            php${PHP_VERSION}-mbstring \
-            php${PHP_VERSION}-xml \
-            php${PHP_VERSION}-bcmath \
-            php${PHP_VERSION}-curl \
-            php${PHP_VERSION}-zip \
-            php${PHP_VERSION}-sqlite3 \
-            php${PHP_VERSION}-gd \
-            php${PHP_VERSION}-json 2>/dev/null || {
-                # json extension may not be separate package in newer versions
-                print_warning "Some PHP extensions might already be included"
-            }
-    else
-        print_message "Installing default PHP and extensions..."
-        apt-get install -y \
-            php \
-            php-cli \
-            php-mbstring \
-            php-xml \
-            php-bcmath \
-            php-curl \
-            php-zip \
-            php-sqlite3 \
-            php-gd \
-            php-json 2>/dev/null || true
-    fi
-
-    # Verify PHP installation
+    # Verify PHP installation and version
     if ! command -v php &> /dev/null; then
         print_error "PHP installation failed!"
         exit 1
     fi
 
+    if ! check_php_version; then
+        print_error "PHP version is still incompatible with Laravel 7"
+        print_error "Current: $(php -r 'echo PHP_VERSION;')"
+        print_error "Required: >= 7.2.5"
+        exit 1
+    fi
+
     INSTALLED_VERSION=$(php -v | head -n 1)
-    print_message "PHP installed: $INSTALLED_VERSION"
+    print_message "PHP installed: $INSTALLED_VERSION ✓"
 
     # Install Composer
     if ! command -v composer &> /dev/null; then
