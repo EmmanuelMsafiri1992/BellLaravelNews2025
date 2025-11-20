@@ -1,61 +1,95 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# BellNews - Laravel 7 Alarm System
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+Professional alarm and scheduling system built with Laravel 7, optimized for Nano Pi and ARM-based single-board computers.
 
-## About Laravel
+## 🎯 Overview
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+BellNews is a web-based alarm management system that allows you to:
+- Schedule alarms by day and time
+- Manage audio files for alarm sounds
+- Monitor system metrics in real-time
+- Configure network and time settings
+- Manage users with role-based access control
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Originally developed in Python Flask, now professionally ported to Laravel 7 with enhanced features and stability.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## ✨ Features
 
-## Learning Laravel
+- **Password-Only Authentication** - Secure login without usernames
+- **Alarm Management** - Schedule alarms for specific days and times
+- **Sound Library** - Upload and manage audio files (MP3, WAV, etc.)
+- **Real-Time Dashboard** - Live system metrics and clock
+- **User Management** - Admin and superuser roles
+- **License Management** - Feature activation system
+- **Network Configuration** - Static/DHCP IP settings
+- **Time Settings** - NTP server or manual time configuration
+- **Auto-Start Service** - Runs automatically on boot via systemd
+- **Browser-Based Alarm Triggering** - JavaScript alarm monitoring system
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🖥️ System Requirements
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Hardware**: Nano Pi (any model) or ARM-based SBC
+- **OS**: Debian 10+, Ubuntu 18.04+, or compatible
+- **RAM**: Minimum 512MB (1GB+ recommended)
+- **Storage**: Minimum 500MB free space
+- **PHP**: 7.4+ with required extensions
+- **Database**: SQLite3
 
-## Laravel Sponsors
+## 🚀 Quick Installation on Nano Pi
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+```bash
+# Clone repository
+git clone https://github.com/EmmanuelMsafiri1992/BellLaravelNews2025.git
+cd BellLaravelNews2025
 
-### Premium Partners
+# Make installer executable
+chmod +x install.sh
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[OP.GG](https://op.gg)**
+# Run installer
+sudo bash install.sh
+```
 
-## Contributing
+Access at: **http://YOUR_NANO_PI_IP:8000**
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**Default Credentials:**
+- Admin Password: `adminpassword`
+- Super User Password: `superpassword`
 
-## Code of Conduct
+> ⚠️ **IMPORTANT:** Change default passwords immediately after first login!
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 📖 Full Documentation
 
-## Security Vulnerabilities
+See **[INSTALL.md](INSTALL.md)** for:
+- Detailed installation steps
+- Troubleshooting guide
+- Advanced configuration
+- Service management
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 🔧 Quick Commands
 
-## License
+```bash
+# Check service status
+sudo systemctl status bellnews
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# View logs
+sudo journalctl -u bellnews -f
+
+# Restart service
+sudo systemctl restart bellnews
+
+# Uninstall
+sudo bash uninstall.sh
+```
+
+## 🛠️ Technology Stack
+
+- **Backend**: Laravel 7.x (PHP)
+- **Database**: SQLite3
+- **Frontend**: Vanilla JavaScript (ES6 Modules)
+- **Styling**: Tailwind CSS
+- **Service**: systemd
+- **Web Server**: PHP built-in server
+
+---
+
+**Built for Nano Pi | Powered by Laravel 7 | Auto-Starts on Boot**
