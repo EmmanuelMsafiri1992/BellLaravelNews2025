@@ -21,6 +21,7 @@ SERVICE_NAME="bellnews"
 PHP_VERSION=""  # Will be auto-detected
 APP_PORT="8000"
 APP_USER="bellnews"
+SKIP_PHP_VERSION_CHECK=false  # Set to true if user explicitly accepts old PHP
 
 # Print colored message
 print_message() {
@@ -131,8 +132,32 @@ install_dependencies() {
 
         if [ -z "$TARGET_PHP_VERSION" ]; then
             print_error "Could not find compatible PHP version (>= 7.2.5) in repositories"
-            print_error "Please upgrade your system or manually install PHP 7.2+"
-            exit 1
+            echo ""
+            echo -e "${YELLOW}╔════════════════════════════════════════════════════╗${NC}"
+            echo -e "${YELLOW}║  Ubuntu 16.04 ARM doesn't have PHP 7.2+ packages  ║${NC}"
+            echo -e "${YELLOW}╚════════════════════════════════════════════════════╝${NC}"
+            echo ""
+            echo -e "Your options:"
+            echo -e "  1. ${GREEN}Upgrade to Ubuntu 18.04/20.04${NC} (recommended)"
+            echo -e "     Run: ${BLUE}sudo do-release-upgrade${NC}"
+            echo -e ""
+            echo -e "  2. ${GREEN}Continue with PHP 7.0 anyway${NC} (may have issues)"
+            echo -e "     Some Laravel packages might not work"
+            echo -e ""
+            read -p "Do you want to continue with PHP 7.0 anyway? (yes/no) " -r
+            echo
+            if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+                print_warning "Continuing with PHP 7.0 - expect compatibility issues"
+                SKIP_PHP_VERSION_CHECK=true
+                return 0  # Continue with existing PHP 7.0
+            else
+                print_message "Installation cancelled. Please upgrade Ubuntu first."
+                echo -e ""
+                echo -e "To upgrade Ubuntu:"
+                echo -e "  ${BLUE}sudo do-release-upgrade${NC}"
+                echo -e ""
+                exit 0
+            fi
         fi
 
         print_message "Installing PHP $TARGET_PHP_VERSION and extensions..."
@@ -163,11 +188,15 @@ install_dependencies() {
         exit 1
     fi
 
-    if ! check_php_version; then
-        print_error "PHP version is still incompatible with Laravel 7"
-        print_error "Current: $(php -r 'echo PHP_VERSION;')"
-        print_error "Required: >= 7.2.5"
-        exit 1
+    if [ "$SKIP_PHP_VERSION_CHECK" = false ]; then
+        if ! check_php_version; then
+            print_error "PHP version is still incompatible with Laravel 7"
+            print_error "Current: $(php -r 'echo PHP_VERSION;')"
+            print_error "Required: >= 7.2.5"
+            exit 1
+        fi
+    else
+        print_warning "Skipping PHP version check (user accepted incompatible version)"
     fi
 
     INSTALLED_VERSION=$(php -v | head -n 1)
