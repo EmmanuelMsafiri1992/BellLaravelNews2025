@@ -388,7 +388,12 @@ install_application() {
     # Optimize Laravel
     print_message "Optimizing application..."
     sudo -u $APP_USER php artisan config:cache
-    sudo -u $APP_USER php artisan route:cache
+
+    # Route caching may fail if any routes use closures
+    sudo -u $APP_USER php artisan route:cache 2>/dev/null || {
+        print_warning "Route caching skipped (routes may contain closures)"
+    }
+
     sudo -u $APP_USER php artisan view:cache
 }
 

@@ -27,7 +27,9 @@
       "Bash(findstr:*)",
       "Bash(taskkill //F //PID 10080)",
       "Bash(git push:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(git rm:*)",
+      "Bash(Uses Closure.\" because home route used a closure instead of a controller.\n\nFixes:\n- Created WelcomeController for the public home page\n- Replaced closure route with controller action: WelcomeController@index\n- Installer now handles route caching errors gracefully (skips if closures exist)\n- All routes now use controller actions, enabling route caching in production\n\nThis enables full Laravel optimization (config cache, route cache, view cache)\nfor better performance on embedded devices.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
