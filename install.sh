@@ -350,18 +350,28 @@ install_application() {
     # Set up database
     print_message "Setting up database..."
     sudo -u $APP_USER mkdir -p $APP_DIR/database
+
+    # Remove any existing database file from repository (it contains development data)
+    # We need a fresh database for production installation
+    if [ -f $APP_DIR/database/database.sqlite ]; then
+        print_message "Removing development database from repository..."
+        rm -f $APP_DIR/database/database.sqlite
+    fi
+
+    # Create fresh empty database file for production
+    print_message "Creating fresh production database..."
     sudo -u $APP_USER touch $APP_DIR/database/database.sqlite
 
     # Ensure database file has correct permissions
     chmod 664 $APP_DIR/database/database.sqlite
     chown $APP_USER:$APP_USER $APP_DIR/database/database.sqlite
 
-    # Run migrations
+    # Run migrations on fresh database
     print_message "Running database migrations..."
     sudo -u $APP_USER php artisan migrate --force
 
-    # Seed database with default data
-    print_message "Seeding database..."
+    # Seed database with default production data
+    print_message "Seeding database with default data..."
     sudo -u $APP_USER php artisan db:seed --force || print_warning "Database seeding failed or already completed"
 
     # Set permissions
