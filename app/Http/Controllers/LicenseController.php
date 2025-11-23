@@ -72,7 +72,6 @@ class LicenseController extends Controller
         ]);
 
         return response()->json([
-            'status' => 'success',
             'success' => true,
             'message' => 'License updated successfully'
         ]);
@@ -88,7 +87,6 @@ class LicenseController extends Controller
         $licenseKey = (string) Str::uuid();
 
         return response()->json([
-            'status' => 'success',
             'success' => true,
             'licenseKey' => $licenseKey
         ]);

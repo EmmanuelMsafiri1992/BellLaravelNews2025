@@ -1,8 +1,6 @@
 // main.js
 // The entry point that orchestrates the initialization and event listener setup,
 // importing from other modules.
-// Note: Cache busting is handled by the ?v={{ time() }} parameter on the main.js import
-// in the HTML template, combined with nginx no-cache headers for JS/CSS files.
 
 import { handleLogin, logout, showChangePassword, handleChangePassword } from './auth.js';
 import { fetchUsers, showUserManagementTab, showResetPasswordModal, handleResetPassword, handleAddUser } from './userManagement.js';
@@ -12,7 +10,7 @@ import { updateCurrentTime, updateMetrics } from './dashboard.js';
 import { populateSounds, testSound, deleteSound, handleSoundUpload } from './sounds.js';
 import { handleAddAlarm, fetchAlarmsAndRender, renderAlarms, removeAlarm, editAlarm, handleEditAlarm, renderWeeklyAlarms } from './alarms.js';
 import { showFlashMessage, closeModal, openModal } from './ui.js';
-import { setCurrentUserRole, setCurrentUserFeaturesActivated, setLicenseInfo, setSystemSettings, getLicenseInfo, getCurrentUserRole, getCurrentUserFeaturesActivated } from './globals.js';
+import { setCurrentUserRole, setCurrentUserFeaturesActivated, setLicenseInfo, setSystemSettings, licenseInfo, currentUserRole, currentUserFeaturesActivated } from './globals.js';
 import { startAlarmMonitoring } from './alarmChecker.js';
 
 
@@ -59,31 +57,23 @@ export function showDashboard() {
  * and current user's roles/feature activation, then updates the UI.
  * This function is crucial for synchronizing frontend state with backend.
  */
-let isFetchingSettings = false;
-
 export async function fetchSystemSettingsAndUpdateUI() {
-    if (isFetchingSettings) {
-        console.log("[MAIN] fetchSystemSettingsAndUpdateUI already running, skipping...");
-        return;
-    }
-
-    isFetchingSettings = true;
-    console.log("[MAIN] Fetching system settings and updating UI...");
+    console.log("Fetching system settings and updating UI...");
     try {
-        const response = await fetch('/api/system_settings', { credentials: 'include' });
+        const response = await fetch('/api/system_settings', { credentials: 'same-origin' });
         const data = await response.json();
-        console.log("[MAIN] System Settings fetched:", data);
+        console.log("System Settings fetched:", data);
         if (!data.success) {
             showFlashMessage(data.message, 'error', 'dashboardFlashContainer');
             return;
         }
         setSystemSettings(data.settings);
         setLicenseInfo(data.settings.license);
-        console.log("[MAIN] License Info Status (after fetch):", getLicenseInfo().status);
+        console.log("License Info Status (after fetch):", licenseInfo.status);
 
-        setCurrentUserRole(data.user_role);
-        setCurrentUserFeaturesActivated(data.current_user_features_activated);
-        console.log(`[MAIN] Current User Role: ${getCurrentUserRole()}, Features Activated: ${getCurrentUserFeaturesActivated()}`);
+//         setCurrentUserRole(data.user_role);
+//         setCurrentUserFeaturesActivated(data.current_user_features_activated);
+        console.log(`Current User Role: ${currentUserRole}, Features Activated: ${currentUserFeaturesActivated}`);
 
         updateLicenseUI();
         checkUserRoleAndFeatureActivation();
@@ -98,12 +88,10 @@ export async function fetchSystemSettingsAndUpdateUI() {
         if (manualTimeInput) manualTimeInput.value = data.settings.timeSettings?.manualTime || '';
 
         toggleStaticIpFields();
-        console.log("[MAIN] System settings UI updated successfully.");
+        console.log("System settings UI updated successfully.");
     } catch (error) {
-        console.error("[MAIN] Error fetching system settings for UI update:", error);
+        console.error("Error fetching system settings for UI update:", error);
         showFlashMessage("Failed to load system settings for dashboard display. " + error.message, "error", 'dashboardFlashContainer');
-    } finally {
-        isFetchingSettings = false;
     }
 }
 
@@ -132,7 +120,7 @@ async function init() {
  * Event listener for when the DOM content is fully loaded.
  * Determines whether to show the login page or the dashboard based on Flask's initial login status.
  */
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     const loginStatusElement = document.getElementById('flaskLoginStatus');
     const isLoggedInFromFlask = loginStatusElement ? loginStatusElement.value === 'true' : false;
 
@@ -144,38 +132,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error("Dashboard button with ID 'resetPasswordBtn' not found.");
     }
 
-    // Verify login status - check server if @auth says not logged in
-    let actuallyLoggedIn = isLoggedInFromFlask;
-    if (!isLoggedInFromFlask) {
-        try {
-            console.log("Checking session via API...");
-            const response = await fetch('/api/system_settings', { credentials: 'include' });
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.user_role) {
-                    actuallyLoggedIn = true;
-                    // Set all user and system data from API response
-                    setCurrentUserRole(data.user_role);
-                    setCurrentUserFeaturesActivated(data.current_user_features_activated || false);
-                    setSystemSettings(data.settings);
-                    setLicenseInfo(data.settings.license);
-                    console.log("Session verified via API, user is logged in as:", data.user_role);
-                    console.log("License status loaded:", data.settings.license?.status);
-                    // Update UI with license info
-                    updateLicenseUI();
-                    checkUserRoleAndFeatureActivation();
-                }
-            }
-        } catch (error) {
-            console.log("Session check failed:", error);
-        }
-    }
-
-    if (actuallyLoggedIn) {
-        console.log("User is logged in. Showing dashboard.");
+    if (isLoggedInFromFlask) {
+        console.log("User is already logged in (from Flask status). Showing dashboard.");
         showDashboard();
     } else {
-        console.log("User is not logged in. Showing login page.");
+        console.log("User is not logged in (from Flask status). Showing login page.");
         showLogin();
     }
 

@@ -72,13 +72,13 @@ export async function handleLicenseSubmit(e) {
     const licenseKey = licenseKeyElem ? licenseKeyElem.value : '';
     const fullExpiry = licenseExpiryElem ? `${licenseExpiryElem.value}:00` : '';
 
-    console.log("Sending license data:", { key: licenseKey, expiry: fullExpiry });
+    console.log("Sending license data:", { licenseKey: licenseKey, expiryDate: fullExpiry });
 
     try {
         const response = await fetch('/api/license', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: licenseKey, expiry: fullExpiry })
+            body: JSON.stringify({ licenseKey: licenseKey, expiryDate: fullExpiry })
         });
         const result = await response.json();
         console.log("License Validation Response:", result);
@@ -137,8 +137,6 @@ export function updateLicenseUI() {
  * This function centralized all permission-based UI adjustments.
  */
 export async function checkUserRoleAndFeatureActivation() {
-    console.log("checkUserRoleAndFeatureActivation called with role:", currentUserRole, "features_activated:", currentUserFeaturesActivated);
-
     const resetPasswordBtn = document.getElementById('resetPasswordBtn');
     const licenseBtn = document.getElementById('licenseManagementBtn');
     const addAlarmBtn = document.getElementById('addAlarmBtn');
@@ -155,10 +153,7 @@ export async function checkUserRoleAndFeatureActivation() {
         }
     }
 
-    console.log("Checking role - currentUserRole:", currentUserRole);
     if (currentUserRole === "superuser") {
-        console.log("Showing superuser features");
-
         if (licenseBtn) licenseBtn.classList.remove('hidden');
         if (addAlarmBtn) addAlarmBtn.disabled = false;
         if (uploadSoundBtn) uploadSoundBtn.disabled = false;

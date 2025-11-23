@@ -50,7 +50,7 @@ class LoginController extends Controller
 
         foreach ($users as $user) {
             // Try to authenticate with this user's username and the provided password
-            if (Auth::attempt(['username' => $user->username, 'password' => $password], false)) {
+            if (Auth::attempt(['username' => $user->username, 'password' => $password], true)) {
                 $authenticatedUser = Auth::user();
 
                 // Check if admin user needs license activation

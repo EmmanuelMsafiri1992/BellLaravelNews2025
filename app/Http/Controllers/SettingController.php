@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Setting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class SettingController extends Controller
@@ -31,13 +30,9 @@ class SettingController extends Controller
             'license' => Setting::getLicenseSettings(),
         ];
 
-        $user = Auth::user();
-
         return response()->json([
             'success' => true,
-            'settings' => $settings,
-            'user_role' => $user ? $user->role : null,
-            'current_user_features_activated' => $user ? $user->features_activated : false
+            'settings' => $settings
         ]);
     }
 

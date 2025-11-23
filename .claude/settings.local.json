@@ -25,7 +25,9 @@
       "Bash(curl:*)",
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
-      "Bash(taskkill //F //PID 10080)"
+      "Bash(taskkill //F //PID 10080)",
+      "Bash(git push:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []
