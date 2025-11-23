@@ -1,35 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ssh:*)",
-      "Bash(rsync:*)",
-      "Bash(tar:*)",
-      "Bash(scp:*)",
-      "Bash(for i in {1..20}:*)",
-      "Bash(do ssh -o ConnectTimeout=3 -o BatchMode=yes root@192.168.1.141 \"echo ''System online''\")",
-      "Bash(break)",
-      "Bash(echo:*)",
-      "Bash(done)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(cat:*)",
-      "Bash(sshpass:*)",
-      "Bash(ping:*)",
-      "Bash(C:/temp/settings.js)",
-      "Bash(C:/temp/Setting.php)",
-      "Bash(/dev/null)",
-      "Bash(for i in {1..5})",
-      "Bash(do ping -c 1 -W 1 192.168.1.75)",
-      "Bash(exit 0)",
-      "Bash(nmap:*)",
-      "Bash(curl:*)",
-      "Bash(tasklist:*)",
-      "Bash(findstr:*)",
-      "Bash(taskkill //F //PID 10080)",
-      "Bash(git push:*)",
-      "Bash(git restore:*)",
-      "Bash(git rm:*)",
-      "Bash(Uses Closure.\" because home route used a closure instead of a controller.\n\nFixes:\n- Created WelcomeController for the public home page\n- Replaced closure route with controller action: WelcomeController@index\n- Installer now handles route caching errors gracefully (skips if closures exist)\n- All routes now use controller actions, enabling route caching in production\n\nThis enables full Laravel optimization (config cache, route cache, view cache)\nfor better performance on embedded devices.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
