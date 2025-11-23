@@ -327,6 +327,19 @@ install_application() {
         print_message "Creating .env file..."
         sudo -u $APP_USER cp $APP_DIR/.env.example $APP_DIR/.env
 
+        # Configure for SQLite database
+        print_message "Configuring database for SQLite..."
+        sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=sqlite/' $APP_DIR/.env
+        sed -i 's/DB_HOST=.*/# DB_HOST=127.0.0.1/' $APP_DIR/.env
+        sed -i 's/DB_PORT=.*/# DB_PORT=3306/' $APP_DIR/.env
+        sed -i 's/DB_DATABASE=.*/# DB_DATABASE=laravel/' $APP_DIR/.env
+        sed -i 's/DB_USERNAME=.*/# DB_USERNAME=root/' $APP_DIR/.env
+        sed -i 's/DB_PASSWORD=.*/# DB_PASSWORD=/' $APP_DIR/.env
+
+        # Set app to production mode
+        sed -i 's/APP_ENV=.*/APP_ENV=production/' $APP_DIR/.env
+        sed -i 's/APP_DEBUG=.*/APP_DEBUG=false/' $APP_DIR/.env
+
         # Generate application key
         print_message "Generating application key..."
         sudo -u $APP_USER php artisan key:generate
@@ -338,6 +351,10 @@ install_application() {
     print_message "Setting up database..."
     sudo -u $APP_USER mkdir -p $APP_DIR/database
     sudo -u $APP_USER touch $APP_DIR/database/database.sqlite
+
+    # Ensure database file has correct permissions
+    chmod 664 $APP_DIR/database/database.sqlite
+    chown $APP_USER:$APP_USER $APP_DIR/database/database.sqlite
 
     # Run migrations
     print_message "Running database migrations..."
