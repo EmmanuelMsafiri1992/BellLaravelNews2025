@@ -669,7 +669,7 @@
                     <i class="fas fa-times mr-2"></i>
                     Cancel
                 </button>
-                <button type="button" class="btn btn-primary flex-1">
+                <button type="submit" class="btn btn-primary flex-1">
                     <i class="fas fa-check mr-2"></i>
                     Save Settings
                 </button>

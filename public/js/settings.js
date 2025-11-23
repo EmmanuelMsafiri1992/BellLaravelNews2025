@@ -82,7 +82,7 @@ export async function handleSettingsSubmit(e) {
     const ipRegex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
 
     const updatedSettings = {
-        networkSettings: {},
+        network: {},
         timeSettings: {},
         API_SERVICE_URL: systemSettings.API_SERVICE_URL, // Retain existing API URL
         // UPDATED: Add Ubuntu Device IP Address to updated settings (if element exists)
@@ -90,9 +90,9 @@ export async function handleSettingsSubmit(e) {
     };
 
     const selectedIpType = document.querySelector('input[name="ipType"]:checked');
-    updatedSettings.networkSettings.ipType = selectedIpType ? selectedIpType.value : 'dynamic';
+    updatedSettings.network.ipType = selectedIpType ? selectedIpType.value : 'dynamic';
 
-    if (updatedSettings.networkSettings.ipType === 'static') {
+    if (updatedSettings.network.ipType === 'static') {
         const ipAddress = document.getElementById('ipAddress');
         const subnetMask = document.getElementById('subnetMask');
         const gateway = document.getElementById('gateway');
@@ -108,15 +108,15 @@ export async function handleSettingsSubmit(e) {
             showFlashMessage("Please enter valid IPv4 addresses for static IP configuration.", "error", 'dashboardFlashContainer');
             return;
         }
-        updatedSettings.networkSettings.ipAddress = ipAddressValue;
-        updatedSettings.networkSettings.subnetMask = subnetMaskValue;
-        updatedSettings.networkSettings.gateway = gatewayValue;
-        updatedSettings.networkSettings.dnsServer = dnsServerValue;
+        updatedSettings.network.ipAddress = ipAddressValue;
+        updatedSettings.network.subnetMask = subnetMaskValue;
+        updatedSettings.network.gateway = gatewayValue;
+        updatedSettings.network.dnsServer = dnsServerValue;
     } else {
-        updatedSettings.networkSettings.ipAddress = '';
-        updatedSettings.networkSettings.subnetMask = '';
-        updatedSettings.networkSettings.gateway = '';
-        updatedSettings.networkSettings.dnsServer = '';
+        updatedSettings.network.ipAddress = '';
+        updatedSettings.network.subnetMask = '';
+        updatedSettings.network.gateway = '';
+        updatedSettings.network.dnsServer = '';
     }
 
     const selectedTimeType = document.querySelector('.toggle-option.active');
@@ -156,7 +156,7 @@ export async function handleSettingsSubmit(e) {
         });
         const result = await response.json();
         console.log("Settings Save Response:", result);
-        if (result.status === 'success') {
+        if (result.success) {
             showFlashMessage(result.message, "success", 'dashboardFlashContainer');
             closeModal('settingsModal'); // Close modal on success
             await fetchSystemSettingsAndUpdateUI();
