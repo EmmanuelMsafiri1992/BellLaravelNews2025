@@ -101,10 +101,38 @@ install_dependencies() {
     apt-get update
     apt-get install -y software-properties-common curl wget git unzip sqlite3
 
+    # Detect current PHP version
+    PHP_VERSION_DETECTED=""
+    if command -v php &> /dev/null; then
+        PHP_VERSION_DETECTED=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+    fi
+
     # Check if PHP is installed and if version is compatible
     if check_php_version; then
         INSTALLED_PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION.'.'.PHP_RELEASE_VERSION;")
         print_message "PHP $INSTALLED_PHP_VERSION is compatible with Laravel 7 ✓"
+
+        # Install/ensure all required PHP extensions are present
+        # Note: php-xml package includes dom, simplexml, xml, xmlreader, xmlwriter extensions
+        print_message "Ensuring all required PHP extensions are installed..."
+        apt-get install -y \
+            php${PHP_VERSION_DETECTED}-cli \
+            php${PHP_VERSION_DETECTED}-mbstring \
+            php${PHP_VERSION_DETECTED}-xml \
+            php${PHP_VERSION_DETECTED}-bcmath \
+            php${PHP_VERSION_DETECTED}-curl \
+            php${PHP_VERSION_DETECTED}-zip \
+            php${PHP_VERSION_DETECTED}-sqlite3 \
+            php${PHP_VERSION_DETECTED}-gd \
+            php${PHP_VERSION_DETECTED}-tokenizer \
+            php${PHP_VERSION_DETECTED}-fileinfo \
+            php${PHP_VERSION_DETECTED}-json 2>/dev/null || {
+                print_warning "Some PHP extensions might already be included or unavailable"
+            }
+
+        # Verify critical extensions are loaded
+        print_message "Verifying PHP extensions..."
+        php -m | grep -q dom || print_warning "DOM extension may not be loaded - check PHP configuration"
     else
         if command -v php &> /dev/null; then
             OLD_PHP_VERSION=$(php -r "echo PHP_VERSION;")
@@ -161,6 +189,7 @@ install_dependencies() {
         fi
 
         print_message "Installing PHP $TARGET_PHP_VERSION and extensions..."
+        # Note: php-xml includes dom extension
         apt-get install -y \
             php${TARGET_PHP_VERSION} \
             php${TARGET_PHP_VERSION}-cli \
@@ -171,9 +200,15 @@ install_dependencies() {
             php${TARGET_PHP_VERSION}-zip \
             php${TARGET_PHP_VERSION}-sqlite3 \
             php${TARGET_PHP_VERSION}-gd \
-            php${TARGET_PHP_VERSION}-json 2>/dev/null || {
+            php${TARGET_PHP_VERSION}-json \
+            php${TARGET_PHP_VERSION}-tokenizer \
+            php${TARGET_PHP_VERSION}-fileinfo 2>/dev/null || {
                 print_warning "Some PHP extensions might already be included"
             }
+
+        # Verify critical extensions after installation
+        print_message "Verifying PHP extensions..."
+        php -m | grep -q dom || print_warning "DOM extension may not be loaded - check PHP configuration"
 
         # Set the new PHP version as default if multiple versions exist
         if command -v update-alternatives &> /dev/null; then
@@ -201,6 +236,49 @@ install_dependencies() {
 
     INSTALLED_VERSION=$(php -v | head -n 1)
     print_message "PHP installed: $INSTALLED_VERSION ✓"
+
+    # Verify required PHP extensions
+    print_message "Verifying required PHP extensions..."
+    MISSING_EXTENSIONS=()
+    REQUIRED_EXTENSIONS=("dom" "mbstring" "xml" "curl" "zip" "sqlite3" "json" "tokenizer" "fileinfo")
+
+    for ext in "${REQUIRED_EXTENSIONS[@]}"; do
+        if ! php -m | grep -qi "^$ext$"; then
+            MISSING_EXTENSIONS+=("$ext")
+        fi
+    done
+
+    if [ ${#MISSING_EXTENSIONS[@]} -gt 0 ]; then
+        print_warning "Missing PHP extensions: ${MISSING_EXTENSIONS[*]}"
+        print_message "Attempting to fix missing extensions..."
+
+        # Get current PHP version
+        CURRENT_PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+
+        # Try to install missing extensions
+        for ext in "${MISSING_EXTENSIONS[@]}"; do
+            apt-get install -y php${CURRENT_PHP_VER}-${ext} 2>/dev/null || {
+                print_warning "Could not install php${CURRENT_PHP_VER}-${ext}"
+            }
+        done
+
+        # Verify again
+        STILL_MISSING=()
+        for ext in "${MISSING_EXTENSIONS[@]}"; do
+            if ! php -m | grep -qi "^$ext$"; then
+                STILL_MISSING+=("$ext")
+            fi
+        done
+
+        if [ ${#STILL_MISSING[@]} -gt 0 ]; then
+            print_warning "Still missing: ${STILL_MISSING[*]}"
+            print_message "These may be included in other packages or not required"
+        else
+            print_message "All extensions installed successfully ✓"
+        fi
+    else
+        print_message "All required PHP extensions are installed ✓"
+    fi
 
     # Install Composer
     if ! command -v composer &> /dev/null; then
