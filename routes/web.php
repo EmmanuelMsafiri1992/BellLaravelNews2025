@@ -139,10 +139,4 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/status', 'App\Http\Controllers\DashboardController@status')->name('dashboard.status');
 });
 
-Route::get('/test-auth', function() {
-    return response()->json([
-        'authenticated' => Auth::check(),
-        'user' => Auth::user(),
-        'session_id' => session()->getId(),
-    ]);
-});
+// Removed test-auth route (used closure, prevented route caching)
