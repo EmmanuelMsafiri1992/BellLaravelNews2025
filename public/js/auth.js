@@ -2,6 +2,7 @@
 import { showFlashMessage, openModal } from './ui.js';
 import { setCurrentUserRole, setCurrentUserFeaturesActivated } from './globals.js';
 import { fetchSystemSettingsAndUpdateUI, showDashboard, showLogin } from './main.js';
+import { checkUserRoleAndFeatureActivation } from './license.js';
 
 /**
  * Event listener for the login form submission.
@@ -31,8 +32,10 @@ export async function handleLogin(e) {
         const response = await fetch('/login', {
             method: 'POST',
             headers: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
+            credentials: 'include',
             body: formData
         });
         
@@ -48,9 +51,22 @@ export async function handleLogin(e) {
         localStorage.setItem('lastResponse', JSON.stringify(result));
 
         if (result.success === true) {
-            console.log("Login successful! Showing dashboard...");
-            
-            // Show dashboard directly (no page reload needed)
+            console.log("Login successful! Updating user info...");
+            localStorage.setItem('loginSuccess', 'true');
+            localStorage.setItem('loginUser', result.user.username);
+
+            // Update global user info from response
+            if (result.user && result.user.role) {
+                setCurrentUserRole(result.user.role);
+                setCurrentUserFeaturesActivated(result.user.features_activated || false);
+                console.log("Updated user role to:", result.user.role);
+                console.log("Updated features_activated to:", result.user.features_activated);
+                // Immediately update UI to show correct features for this role
+                checkUserRoleAndFeatureActivation();
+            }
+
+            // Show dashboard directly without reload
+            console.log("Login successful, showing dashboard...");
             showDashboard();
         } else if (result.success === false && result.message) {
             showFlashMessage(result.message, "error", 'loginFlashContainer', false);
@@ -79,7 +95,10 @@ export async function handleLogin(e) {
 export async function logout() {
     showFlashMessage("Logging out...", "info", 'dashboardFlashContainer');
     try {
-        const response = await fetch('/logout', { method: 'POST' });
+        const response = await fetch('/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
         if (response.redirected) {
             window.location.href = response.url;
         } else {
@@ -129,6 +148,7 @@ export async function handleChangePassword(e) {
     try {
         const response = await fetch('/change_password', {
             method: 'POST',
+            credentials: 'include',
             body: formData
         });
         

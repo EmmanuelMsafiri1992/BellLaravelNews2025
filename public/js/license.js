@@ -72,13 +72,13 @@ export async function handleLicenseSubmit(e) {
     const licenseKey = licenseKeyElem ? licenseKeyElem.value : '';
     const fullExpiry = licenseExpiryElem ? `${licenseExpiryElem.value}:00` : '';
 
-    console.log("Sending license data:", { licenseKey: licenseKey, expiryDate: fullExpiry });
+    console.log("Sending license data:", { key: licenseKey, expiry: fullExpiry });
 
     try {
         const response = await fetch('/api/license', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ licenseKey: licenseKey, expiryDate: fullExpiry })
+            body: JSON.stringify({ key: licenseKey, expiry: fullExpiry })
         });
         const result = await response.json();
         console.log("License Validation Response:", result);
@@ -137,6 +137,8 @@ export function updateLicenseUI() {
  * This function centralized all permission-based UI adjustments.
  */
 export async function checkUserRoleAndFeatureActivation() {
+    console.log("checkUserRoleAndFeatureActivation called with role:", currentUserRole, "features_activated:", currentUserFeaturesActivated);
+
     const resetPasswordBtn = document.getElementById('resetPasswordBtn');
     const licenseBtn = document.getElementById('licenseManagementBtn');
     const addAlarmBtn = document.getElementById('addAlarmBtn');
@@ -153,7 +155,10 @@ export async function checkUserRoleAndFeatureActivation() {
         }
     }
 
+    console.log("Checking role - currentUserRole:", currentUserRole);
     if (currentUserRole === "superuser") {
+        console.log("Showing superuser features");
+
         if (licenseBtn) licenseBtn.classList.remove('hidden');
         if (addAlarmBtn) addAlarmBtn.disabled = false;
         if (uploadSoundBtn) uploadSoundBtn.disabled = false;
@@ -292,13 +297,13 @@ export async function fetchAndRenderLicensedUsers() {
         const response = await fetch('/api/licensed_users');
         const data = await response.json();
 
-        if (data.status === 'error') {
-            showFlashMessage(data.message, 'error', 'dashboardFlashContainer');
+        if (!data.success) {
+            showFlashMessage(data.message || "Failed to fetch licensed users", 'error', 'dashboardFlashContainer');
             noUsersDiv.classList.remove('hidden');
             return;
         }
 
-        const licensedUsers = data.licensedUsers || [];
+        const licensedUsers = data.users || [];
         console.log("Fetched licensed users:", licensedUsers);
 
         if (licensedUsers.length === 0) {
@@ -307,9 +312,9 @@ export async function fetchAndRenderLicensedUsers() {
             licensedUsers.forEach(user => {
                 const row = document.createElement('tr');
                 row.className = 'bg-white border-b hover:bg-gray-50';
-                const activatedAt = user.activated_at ? new Date(user.activated_at).toLocaleString() : 'N/A';
+                const activatedAt = user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A';
                 row.innerHTML = `
-                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${user.user_id}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${user.username || user.id}</td>
                     <td class="px-6 py-4">${activatedAt}</td>
                 `;
                 tbody.appendChild(row);

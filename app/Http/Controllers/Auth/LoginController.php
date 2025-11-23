@@ -50,7 +50,7 @@ class LoginController extends Controller
 
         foreach ($users as $user) {
             // Try to authenticate with this user's username and the provided password
-            if (Auth::attempt(['username' => $user->username, 'password' => $password])) {
+            if (Auth::attempt(['username' => $user->username, 'password' => $password], false)) {
                 $authenticatedUser = Auth::user();
 
                 // Check if admin user needs license activation
@@ -61,6 +61,9 @@ class LoginController extends Controller
                         'message' => 'System license is not active. Please contact the superuser.'
                     ], 403);
                 }
+
+                // Regenerate session ID to prevent session fixation
+                $request->session()->regenerate();
 
                 // Force save the session to ensure it persists
                 $request->session()->save();

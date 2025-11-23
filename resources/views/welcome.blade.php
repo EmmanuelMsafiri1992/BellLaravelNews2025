@@ -719,7 +719,7 @@
                                             Cancel
                                         </button>
                                         <!-- Validate License Button: Only visible for superusers -->
-                                        <button type="button" class="btn btn-primary flex-1" id="validateLicenseBtn">
+                                        <button type="submit" class="btn btn-primary flex-1" id="validateLicenseBtn">
                                             <i class="fas fa-check mr-2"></i>
                                             Validate System License
                                         </button>
@@ -761,6 +761,6 @@
         </div>
     </div>
     {{-- Import the main.js module, which will then import all other modules --}}
-    <script type="module" src="{{ asset('js/main.js') }}"></script>
+    <script type="module" src="{{ asset('js/main.js') }}?v={{ time() }}"></script>
 </body>
 </html>

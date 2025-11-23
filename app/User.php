@@ -82,14 +82,4 @@ class User extends Authenticatable
     {
         $this->attributes['password'] = Hash::make($value);
     }
-
-    /**
-     * Override getAuthPassword to use username field
-     *
-     * @return string
-     */
-    public function getAuthIdentifierName()
-    {
-        return 'username';
-    }
 }
