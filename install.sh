@@ -68,6 +68,124 @@ check_system() {
     fi
 }
 
+# Detect and cleanup existing installations
+cleanup_existing_installations() {
+    print_message "Checking for existing installations..."
+
+    local FOUND_INSTALLATIONS=false
+    local BACKUP_DIR="$HOME/bellnews_backups_$(date +%Y%m%d_%H%M%S)"
+
+    # Check for existing installations
+    EXISTING_LOCATIONS=(
+        "/opt/bellnews"
+        "/var/www/bellapp"
+        "/var/www/html"
+    )
+
+    for location in "${EXISTING_LOCATIONS[@]}"; do
+        if [ -d "$location" ] && [ -f "$location/artisan" ]; then
+            FOUND_INSTALLATIONS=true
+            print_warning "Found existing installation at: $location"
+        fi
+    done
+
+    if [ "$FOUND_INSTALLATIONS" = false ]; then
+        print_message "No existing installations found. Proceeding with fresh install."
+        return 0
+    fi
+
+    echo ""
+    echo -e "${YELLOW}╔════════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║     Existing BellNews Installation(s) Detected    ║${NC}"
+    echo -e "${YELLOW}╚════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "The installer will:"
+    echo "  1. Stop all running services (nginx, php-fpm, bellnews)"
+    echo "  2. Backup all databases to: $BACKUP_DIR"
+    echo "  3. Remove old installations"
+    echo "  4. Proceed with fresh installation"
+    echo ""
+    read -p "Do you want to continue? (yes/no) " -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+        print_message "Installation cancelled by user."
+        exit 0
+    fi
+
+    # Create backup directory
+    mkdir -p "$BACKUP_DIR"
+    print_message "Created backup directory: $BACKUP_DIR"
+
+    # Stop services
+    print_message "Stopping services..."
+
+    # Stop bellnews systemd service if it exists
+    if systemctl is-active --quiet bellnews 2>/dev/null; then
+        print_message "Stopping bellnews service..."
+        systemctl stop bellnews 2>/dev/null || true
+    fi
+
+    # Stop nginx if running
+    if systemctl is-active --quiet nginx 2>/dev/null; then
+        print_message "Stopping nginx..."
+        systemctl stop nginx 2>/dev/null || true
+    fi
+
+    # Stop php-fpm services
+    for php_service in php7.2-fpm php7.3-fpm php7.4-fpm php8.0-fpm php8.1-fpm php-fpm; do
+        if systemctl is-active --quiet $php_service 2>/dev/null; then
+            print_message "Stopping $php_service..."
+            systemctl stop $php_service 2>/dev/null || true
+        fi
+    done
+
+    # Backup databases from all locations
+    print_message "Backing up databases..."
+    for location in "${EXISTING_LOCATIONS[@]}"; do
+        if [ -f "$location/database/database.sqlite" ]; then
+            DB_BACKUP="$BACKUP_DIR/database_$(basename $location)_$(date +%Y%m%d_%H%M%S).sqlite"
+            cp "$location/database/database.sqlite" "$DB_BACKUP"
+            print_message "Backed up database from $location to $DB_BACKUP"
+        fi
+    done
+
+    # Backup .env files
+    print_message "Backing up configuration files..."
+    for location in "${EXISTING_LOCATIONS[@]}"; do
+        if [ -f "$location/.env" ]; then
+            ENV_BACKUP="$BACKUP_DIR/.env_$(basename $location)_$(date +%Y%m%d_%H%M%S)"
+            cp "$location/.env" "$ENV_BACKUP"
+            print_message "Backed up .env from $location"
+        fi
+    done
+
+    # Remove old installations
+    print_message "Removing old installations..."
+    for location in "${EXISTING_LOCATIONS[@]}"; do
+        if [ -d "$location" ] && [ -f "$location/artisan" ]; then
+            print_message "Removing $location..."
+            rm -rf "$location"
+        fi
+    done
+
+    # Remove old systemd service
+    if [ -f /etc/systemd/system/bellnews.service ]; then
+        print_message "Removing old systemd service..."
+        systemctl disable bellnews 2>/dev/null || true
+        rm -f /etc/systemd/system/bellnews.service
+        systemctl daemon-reload
+    fi
+
+    # Remove old nginx configurations
+    print_message "Removing old nginx configurations..."
+    rm -f /etc/nginx/sites-enabled/bellapp 2>/dev/null || true
+    rm -f /etc/nginx/sites-available/bellapp 2>/dev/null || true
+
+    print_message "Cleanup completed successfully!"
+    print_message "Backups saved to: $BACKUP_DIR"
+    echo ""
+}
+
 # Check PHP version compatibility
 check_php_version() {
     if ! command -v php &> /dev/null; then
@@ -501,6 +619,7 @@ main() {
         exit 0
     fi
 
+    cleanup_existing_installations
     install_dependencies
     create_app_user
     install_application
