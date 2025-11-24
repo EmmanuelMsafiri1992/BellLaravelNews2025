@@ -3,7 +3,9 @@
 use Illuminate\Support\Facades\Route;
 
 // Home page - serves the Vue/vanilla JS SPA
-Route::get('/', 'App\Http\Controllers\WelcomeController@index')->name('home');
+Route::get('/', function () {
+    return view('welcome');
+})->name('home');
 
 // Health check endpoint (public)
 Route::get('/health', 'App\Http\Controllers\DashboardController@status')->name('health');
