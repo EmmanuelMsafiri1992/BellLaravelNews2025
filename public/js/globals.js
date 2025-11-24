@@ -30,3 +30,28 @@ export function setLicenseInfo(info) {
 export function setSystemSettings(settings) {
     systemSettings = settings;
 }
+
+// Getter functions for global variables
+export function getAlarms() {
+    return alarms;
+}
+
+export function getSounds() {
+    return sounds;
+}
+
+export function getCurrentUserRole() {
+    return currentUserRole;
+}
+
+export function getCurrentUserFeaturesActivated() {
+    return currentUserFeaturesActivated;
+}
+
+export function getLicenseInfo() {
+    return licenseInfo;
+}
+
+export function getSystemSettings() {
+    return systemSettings;
+}
