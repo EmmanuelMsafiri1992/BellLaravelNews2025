@@ -34,7 +34,7 @@ export default {
   methods: {
     async fetchSettings() {
       try {
-        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+        const apiBaseUrl = process.env.MIX_API_BASE_URL || window.location.origin;
         const response = await axios.get(`${apiBaseUrl}/api/settings`);
         if (response.data) {
           if (response.data.footer_copyright_text) {

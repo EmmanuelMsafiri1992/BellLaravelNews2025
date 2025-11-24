@@ -146,7 +146,7 @@ export default {
     },
     async fetchSettings() {
         try {
-            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+            const apiBaseUrl = process.env.MIX_API_BASE_URL || window.location.origin;
             const response = await fetch(`${apiBaseUrl}/api/settings`);
             if (!response.ok) {
                 throw new Error('Failed to fetch settings');
@@ -241,7 +241,7 @@ export default {
     async fetchNews() {
       const maxRetries = 3;
       const baseDelay = 1000;
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+      const apiBaseUrl = process.env.MIX_API_BASE_URL || window.location.origin;
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
           const controller = new AbortController();
