@@ -85,7 +85,7 @@
 </head>
 <body>
     <!-- Laravel Authentication Status for JavaScript -->
-    <input type="hidden" id="flaskLoginStatus" value="@auth true@else false@endauth">
+    <input type="hidden" id="flaskLoginStatus" value="{{ auth()->check() ? 'true' : 'false' }}">
     <!-- Login Page Container -->
     @auth
     <input type="hidden" id="currentUserRoleInput" value="{{ Auth::user()->role }}">
