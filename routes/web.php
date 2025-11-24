@@ -2,19 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| OnlyBell Timer Application Routes
-|--------------------------------------------------------------------------
-|
-| Here are all the routes for the OnlyBell Timer application.
-| Routes are organized by functionality: auth, alarms, sounds, settings,
-| license, users, and dashboard.
-|
-*/
-
 // Home page - serves the Vue/vanilla JS SPA
 Route::get('/', 'App\Http\Controllers\WelcomeController@index')->name('home');
+
+// Health check endpoint (public)
+Route::get('/health', 'App\Http\Controllers\DashboardController@status')->name('health');
 
 // Health check endpoint (public)
 Route::get('/health', 'App\Http\Controllers\DashboardController@status')->name('health');
