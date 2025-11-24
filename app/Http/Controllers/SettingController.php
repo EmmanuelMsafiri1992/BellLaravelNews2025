@@ -201,14 +201,66 @@ class SettingController extends Controller
         // Save settings to database first
         Setting::updateNetworkSettings($request->all());
 
-        // TODO: Implement actual network configuration for Linux
-        // This would involve modifying /etc/netplan/*, /etc/dhcpcd.conf, or /etc/network/interfaces
-        // depending on the system configuration detected
+        // Apply network configuration using NetworkManager (nmcli)
+        try {
+            $ipType = $request->input('ipType');
+            $interface = 'eth0'; // Primary network interface on NanoPi
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Network settings saved. System restart may be required for changes to take effect.',
-            'warning' => 'Actual network application not yet implemented for this environment'
-        ]);
+            // Get connection name for eth0
+            $connectionName = trim(shell_exec("nmcli -t -f NAME,DEVICE connection show --active | grep '{$interface}' | cut -d: -f1"));
+
+            if (empty($connectionName)) {
+                throw new \Exception("No active connection found for interface {$interface}");
+            }
+
+            if ($ipType === 'dynamic') {
+                // Configure DHCP
+                shell_exec("nmcli connection modify '{$connectionName}' ipv4.method auto 2>&1");
+                shell_exec("nmcli connection modify '{$connectionName}' ipv4.addresses '' 2>&1");
+                shell_exec("nmcli connection modify '{$connectionName}' ipv4.gateway '' 2>&1");
+                shell_exec("nmcli connection modify '{$connectionName}' ipv4.dns '' 2>&1");
+            } else {
+                // Configure Static IP
+                $ipAddress = $request->input('ipAddress');
+                $subnetMask = $request->input('subnetMask');
+                $gateway = $request->input('gateway');
+                $dnsServer = $request->input('dnsServer', '8.8.8.8');
+
+                // Convert subnet mask to CIDR notation
+                $cidr = $this->subnetMaskToCidr($subnetMask);
+                $ipWithCidr = "{$ipAddress}/{$cidr}";
+
+                shell_exec("nmcli connection modify '{$connectionName}' ipv4.method manual 2>&1");
+                shell_exec("nmcli connection modify '{$connectionName}' ipv4.addresses '{$ipWithCidr}' 2>&1");
+                shell_exec("nmcli connection modify '{$connectionName}' ipv4.gateway '{$gateway}' 2>&1");
+                shell_exec("nmcli connection modify '{$connectionName}' ipv4.dns '{$dnsServer}' 2>&1");
+            }
+
+            // Apply changes by bringing connection down and up
+            shell_exec("nmcli connection down '{$connectionName}' 2>&1");
+            shell_exec("nmcli connection up '{$connectionName}' 2>&1");
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Network settings applied successfully. Connection will reconnect momentarily.',
+                'info' => 'If you lose connection, the system will revert to previous settings automatically.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to apply network settings: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Convert subnet mask to CIDR notation
+     * E.g., 255.255.255.0 => 24
+     */
+    private function subnetMaskToCidr($subnetMask)
+    {
+        $long = ip2long($subnetMask);
+        $base = ip2long('255.255.255.255');
+        return 32 - log(($long ^ $base) + 1, 2);
     }
 }
