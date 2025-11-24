@@ -46,12 +46,12 @@ export async function generateLicenseKey() {
     try {
         const response = await fetch('/api/generate_license_key');
         const result = await response.json();
-        if (result.status === 'success') {
+        if (result.success) {
             const licenseKeyElem = document.getElementById('licenseKey');
             if (licenseKeyElem) licenseKeyElem.value = result.licenseKey;
-            showFlashMessage("New system license key generated successfully.", "info", 'dashboardFlashContainer');
+            showFlashMessage("New system license key generated successfully.", "success", 'dashboardFlashContainer');
         } else {
-            showFlashMessage(result.message, "error", 'dashboardFlashContainer');
+            showFlashMessage(result.message || "Failed to generate license key", "error", 'dashboardFlashContainer');
         }
     } catch (error) {
         console.error("Error generating license key:", error);
