@@ -454,6 +454,10 @@ install_application() {
         sed -i 's/DB_USERNAME=.*/# DB_USERNAME=root/' $APP_DIR/.env
         sed -i 's/DB_PASSWORD=.*/# DB_PASSWORD=/' $APP_DIR/.env
 
+        # Configure session to use database
+        print_message "Configuring session driver for database..."
+        sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=database/' $APP_DIR/.env
+
         # Set app to production mode
         sed -i 's/APP_ENV=.*/APP_ENV=production/' $APP_DIR/.env
         sed -i 's/APP_DEBUG=.*/APP_DEBUG=false/' $APP_DIR/.env
