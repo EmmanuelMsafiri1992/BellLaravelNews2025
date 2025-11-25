@@ -236,14 +236,15 @@ class SettingController extends Controller
                 shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.dns '{$dnsServer}' 2>&1");
             }
 
-            // Apply changes by bringing connection down and up
-            shell_exec("sudo nmcli connection down '{$connectionName}' 2>&1");
-            shell_exec("sudo nmcli connection up '{$connectionName}' 2>&1");
+            // Apply changes using device reapply (cleaner than down/up)
+            // This properly removes old IP and applies new configuration
+            shell_exec("sudo nmcli connection reload 2>&1");
+            usleep(500000); // 0.5 second pause to let NetworkManager process
+            shell_exec("sudo nmcli device reapply {$interface} 2>&1");
 
             return response()->json([
                 'success' => true,
-                'message' => 'Network settings applied successfully. Connection will reconnect momentarily.',
-                'info' => 'If you lose connection, the system will revert to previous settings automatically.'
+                'message' => 'Network settings applied successfully.'
             ]);
         } catch (\Exception $e) {
             return response()->json([
