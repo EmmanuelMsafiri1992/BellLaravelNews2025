@@ -149,6 +149,7 @@ export async function handleSettingsSubmit(e) {
     console.log("Sending updated settings:", updatedSettings);
 
     try {
+        // Step 1: Save settings to database
         const response = await fetch('/api/system_settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -156,13 +157,50 @@ export async function handleSettingsSubmit(e) {
         });
         const result = await response.json();
         console.log("Settings Save Response:", result);
-        if (result.success) {
-            showFlashMessage(result.message, "success", 'dashboardFlashContainer');
-            closeModal('settingsModal'); // Close modal on success
-            await fetchSystemSettingsAndUpdateUI();
-        } else {
+
+        if (!result.success) {
             showFlashMessage(result.message, "error", 'dashboardFlashContainer');
+            return;
         }
+
+        // Step 2: Apply network settings to the system (calls nmcli on Linux/NanoPi)
+        try {
+            const applyResponse = await fetch('/api/apply_network_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedSettings.network)
+            });
+            const applyResult = await applyResponse.json();
+            console.log("Apply Network Response:", applyResult);
+
+            if (applyResult.success) {
+                showFlashMessage("Settings saved and network configuration applied!", "success", 'dashboardFlashContainer');
+
+                // If IP changed, warn user about potential disconnect
+                if (updatedSettings.network.ipType === 'static' && updatedSettings.network.ipAddress) {
+                    const currentHost = window.location.hostname;
+                    if (updatedSettings.network.ipAddress !== currentHost) {
+                        setTimeout(() => {
+                            showFlashMessage(
+                                `IP changed to ${updatedSettings.network.ipAddress}. Reconnect at http://${updatedSettings.network.ipAddress}:8000`,
+                                "info",
+                                'dashboardFlashContainer'
+                            );
+                        }, 2000);
+                    }
+                }
+            } else {
+                // Network apply failed (Windows dev environment or permission issue)
+                showFlashMessage(result.message + " (Note: " + (applyResult.message || "Network apply skipped") + ")", "success", 'dashboardFlashContainer');
+            }
+        } catch (applyError) {
+            // Network apply request failed - likely connection lost due to IP change
+            console.log("Apply network error (expected if IP changed):", applyError);
+            showFlashMessage("Settings saved. If IP changed, reconnect to the new address.", "success", 'dashboardFlashContainer');
+        }
+
+        closeModal('settingsModal');
+        await fetchSystemSettingsAndUpdateUI();
     } catch (error) {
         console.error("Error saving system settings:", error);
         showFlashMessage("Network error saving settings. " + error.message, "error", 'dashboardFlashContainer');
