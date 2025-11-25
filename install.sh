@@ -421,6 +421,29 @@ create_app_user() {
     fi
 }
 
+# Configure network management privileges
+configure_network_privileges() {
+    print_message "Configuring network management privileges for $APP_USER..."
+
+    # Create sudoers file to allow bellnews user to run nmcli without password
+    cat > /etc/sudoers.d/${APP_USER}-network << EOF
+# Allow $APP_USER to manage network settings via NetworkManager
+$APP_USER ALL=(ALL) NOPASSWD: /usr/bin/nmcli
+EOF
+
+    # Set correct permissions for sudoers file
+    chmod 0440 /etc/sudoers.d/${APP_USER}-network
+
+    # Verify the sudoers file is valid
+    if visudo -c -f /etc/sudoers.d/${APP_USER}-network; then
+        print_message "Network management privileges configured successfully ✓"
+    else
+        print_error "Failed to configure sudoers file!"
+        rm -f /etc/sudoers.d/${APP_USER}-network
+        print_warning "Continuing without network management privileges..."
+    fi
+}
+
 # Install application
 install_application() {
     print_message "Installing application to $APP_DIR..."
@@ -626,6 +649,7 @@ main() {
     cleanup_existing_installations
     install_dependencies
     create_app_user
+    configure_network_privileges
     install_application
     create_service
     display_summary

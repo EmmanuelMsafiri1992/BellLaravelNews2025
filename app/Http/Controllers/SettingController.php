@@ -207,7 +207,7 @@ class SettingController extends Controller
             $interface = 'eth0'; // Primary network interface on NanoPi
 
             // Get connection name for eth0
-            $connectionName = trim(shell_exec("nmcli -t -f NAME,DEVICE connection show --active | grep '{$interface}' | cut -d: -f1"));
+            $connectionName = trim(shell_exec("sudo nmcli -t -f NAME,DEVICE connection show --active | grep '{$interface}' | cut -d: -f1"));
 
             if (empty($connectionName)) {
                 throw new \Exception("No active connection found for interface {$interface}");
@@ -215,10 +215,10 @@ class SettingController extends Controller
 
             if ($ipType === 'dynamic') {
                 // Configure DHCP
-                shell_exec("nmcli connection modify '{$connectionName}' ipv4.method auto 2>&1");
-                shell_exec("nmcli connection modify '{$connectionName}' ipv4.addresses '' 2>&1");
-                shell_exec("nmcli connection modify '{$connectionName}' ipv4.gateway '' 2>&1");
-                shell_exec("nmcli connection modify '{$connectionName}' ipv4.dns '' 2>&1");
+                shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.method auto 2>&1");
+                shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.addresses '' 2>&1");
+                shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.gateway '' 2>&1");
+                shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.dns '' 2>&1");
             } else {
                 // Configure Static IP
                 $ipAddress = $request->input('ipAddress');
@@ -230,15 +230,15 @@ class SettingController extends Controller
                 $cidr = $this->subnetMaskToCidr($subnetMask);
                 $ipWithCidr = "{$ipAddress}/{$cidr}";
 
-                shell_exec("nmcli connection modify '{$connectionName}' ipv4.method manual 2>&1");
-                shell_exec("nmcli connection modify '{$connectionName}' ipv4.addresses '{$ipWithCidr}' 2>&1");
-                shell_exec("nmcli connection modify '{$connectionName}' ipv4.gateway '{$gateway}' 2>&1");
-                shell_exec("nmcli connection modify '{$connectionName}' ipv4.dns '{$dnsServer}' 2>&1");
+                shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.method manual 2>&1");
+                shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.addresses '{$ipWithCidr}' 2>&1");
+                shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.gateway '{$gateway}' 2>&1");
+                shell_exec("sudo nmcli connection modify '{$connectionName}' ipv4.dns '{$dnsServer}' 2>&1");
             }
 
             // Apply changes by bringing connection down and up
-            shell_exec("nmcli connection down '{$connectionName}' 2>&1");
-            shell_exec("nmcli connection up '{$connectionName}' 2>&1");
+            shell_exec("sudo nmcli connection down '{$connectionName}' 2>&1");
+            shell_exec("sudo nmcli connection up '{$connectionName}' 2>&1");
 
             return response()->json([
                 'success' => true,
